@@ -39,6 +39,13 @@ branding:
 runs:
   using: "composite"
   steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        ref: ${{ env.TARGET_BRANCH }}
+        fetch-depth: 0
+        fetch-tags: true
+
     - name: Compute tags
       id: ver
       shell: bash

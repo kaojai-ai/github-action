@@ -1,5 +1,5 @@
 name: "Workflow Notify"
-description: "Send a GitHub Action Workflow result to notification provider (e.g. Slack)"
+description: "Broadcast GitHub Action workflow build results to Slack notifications via the official Slack API"
 author: "kaojai.ai"
 
 inputs:

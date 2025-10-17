@@ -119,23 +119,17 @@ runs:
           label: job_status ? job_status.charAt(0).toUpperCase() + job_status.slice(1) : 'Status Unknown'
         };
 
-        const header_text = `${status.emoji} ${prefix} • ${repository} • ${workflow}`;
+        const header_text = `${status.emoji} ${prefix} • ${repository} (${version})`;
 
-        const default_messages = {
-          success: '✅ Workflow completed successfully.',
-          failure: '🚨 Workflow failed. Check the run for details.',
-          cancelled: '⚠️ Workflow was cancelled.'
-        };
-
-        const body_message = message || default_messages[job_status] || `ℹ️ Workflow finished with status ${status.label}.`;
+        const body_message = message || `Built with love 💚 <https://kaojai.ai|KaoJai.ai>`;
 
         const fields = [
           repository && { type: 'mrkdwn', text: `*Repository:* <${repository_url}|${repository}>` },
+          commit_sha && { type: 'mrkdwn', text: `*Commit:* <${commit_url}|${commit_sha}>` },
           version && { type: 'mrkdwn', text: `*Version:* <${version_url}|${version}>` },
-          commit_sha && { type: 'mrkdwn', text: `*Version:* <${commit_url}|${commit_sha}>` },
           actor && { type: 'mrkdwn', text: `*Actor:* ${actor}` },
           { type: 'mrkdwn', text: `*Status:* ${status.label}` },
-          run_url && { type: 'mrkdwn', text: `*Run:* <${run_url}|View workflow run>` }
+          run_url && { type: 'mrkdwn', text: `*Run:* <${run_url}|View ${workflow}>` }
         ].filter(Boolean);
 
         const blocks = [

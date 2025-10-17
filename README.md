@@ -45,7 +45,7 @@ jobs:
           npm run build
 
       - name: Slack Notify
-        uses: kaojai-ai/github-action/workflow-notify@main
+        uses: kaojai-ai/workflow-notify@main
         with:
           slack_webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
           channel: deployment

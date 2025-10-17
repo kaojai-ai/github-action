@@ -6,14 +6,13 @@ inputs:
   slack_webhook_url:
     description: "Incoming Slack webhook URL"
     required: true
+  channel:
+    description: "Channel / target"
+    required: true
   provider_name:
     description: "Notification provider (slack, ...)"
     required: false
     default: "slack"
-  channel:
-    description: "Channel / target"
-    required: false
-    default: "package"
   prefix:
     description: "Title prefix (e.g. 📦 Package, 🚀 Deploy, etc.)"
     required: false

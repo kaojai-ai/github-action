@@ -104,7 +104,7 @@ runs:
         const job_name = process.env.GITHUB_JOB || '';
         const commit_sha = process.env.GITHUB_SHA ? process.env.GITHUB_SHA.substring(0, 7) : '';
         const commit_url = `${server_url}/${repository}/commit/${commit_sha}`;
-        const version = process.env.version || '(no tag)';
+        const version = process.env.version;
         const version_url = `${server_url}/${repository}/releases/tag/${version}`;
 
         const status_map = {
@@ -119,14 +119,14 @@ runs:
           label: job_status ? job_status.charAt(0).toUpperCase() + job_status.slice(1) : 'Status Unknown'
         };
 
-        const header_text = `${status.emoji} ${prefix} • ${repository} (${version})`;
+        const header_text = `${status.emoji} ${prefix} • ${repository} ${version ? `(${version})` : ''}`;
 
         const body_message = message || `Built with love 💚 <https://kaojai.ai|KaoJai.ai>`;
 
         const fields = [
           repository && { type: 'mrkdwn', text: `*Repository:* <${repository_url}|${repository}>` },
           commit_sha && { type: 'mrkdwn', text: `*Commit:* <${commit_url}|${commit_sha}>` },
-          version && { type: 'mrkdwn', text: `*Version:* <${version_url}|${version}>` },
+          version && { type: 'mrkdwn', text: `*Version:* <${version_url}|${version ? version : '(no tag)'}>` },
           actor && { type: 'mrkdwn', text: `*Actor:* ${actor}` },
           { type: 'mrkdwn', text: `*Status:* ${status.label}` },
           run_url && { type: 'mrkdwn', text: `*Run:* <${run_url}|View ${workflow}>` }

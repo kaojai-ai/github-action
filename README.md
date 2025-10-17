@@ -1,8 +1,4 @@
-# KaoJai GitHub Actions
-
-Open-source GitHub Actions that streamline CI/CD workflows by improving the feedback loop during every stage of the software delivery lifecycle. The repository currently ships the **Workflow Notify** composite action, a thin wrapper around notification providers (Slack supported today) that publishes the result of any workflow run.
-
-## Workflow Notify
+# Workflow Notify
 
 `workflow-notify` collects run metadata (repository, branch, triggering actor, commit, and optional semver tags) and emits a rich Slack message that highlights the workflow status. The action is intentionally provider-agnostic so additional destinations can be added later.
 

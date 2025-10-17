@@ -1,0 +1,158 @@
+name: "Workflow Notify"
+description: "Send a GitHub Action Workflow result to notification provider (e.g. Slack)"
+author: "kaojai.ai"
+
+inputs:
+  slack_webhook_url:
+    description: "Incoming Slack webhook URL"
+    required: true
+  provider_name:
+    description: "Notification provider (slack, ...)"
+    required: false
+    default: "slack"
+  channel:
+    description: "Channel / target"
+    required: false
+    default: "package"
+  prefix:
+    description: "Title prefix (e.g. 📦 Package, 🚀 Deploy, etc.)"
+    required: false
+    default: "⚙️ Workflow"
+  bot_name:
+    description: "Bot display name"
+    required: false
+    default: "kj-ops-bot"
+  bot_icon_url:
+    description: "Bot avatar URL"
+    required: false
+    default: "https://avatars.githubusercontent.com/u/227843191"
+  message:
+    description: "Optional message body in Slack Markdown"
+    required: false
+  status:
+    description: "Optional job status override (success, failure, cancelled, etc.)"
+    required: false
+    default: ""
+branding:
+  color: "4A154B"
+  icon: "hash"
+runs:
+  using: "composite"
+  steps:
+    - name: Build Slack payload
+      id: build
+      shell: bash
+      env:
+        slack_webhook_url: ${{ inputs.slack_webhook_url }}
+        provider_name: ${{ inputs.provider_name }}
+        channel: ${{ inputs.channel }}
+        prefix: ${{ inputs.prefix }}
+        bot_name: ${{ inputs.bot_name }}
+        bot_icon_url: ${{ inputs.bot_icon_url }}
+        message: ${{ inputs.message }}
+        status_input: ${{ inputs.status }}
+      run: |
+        set -euo pipefail
+
+        if [ -z "${slack_webhook_url}" ]; then
+          echo "The slack_webhook_url input is required." >&2
+          exit 1
+        fi
+
+        node <<'NODE'
+        const fs = require('fs');
+        const path = require('path');
+
+        const workspace = process.env.GITHUB_WORKSPACE || process.cwd();
+        const payload_path = path.join(workspace, 'slack_payload.json');
+
+        const job_status = (process.env.status_input || process.env.JOB_STATUS || 'success').toLowerCase();
+        const prefix = process.env.prefix || '⚙️ Workflow';
+        const provider_name = process.env.provider_name || 'slack';
+        const workflow = process.env.GITHUB_WORKFLOW || 'Workflow';
+        const repository = process.env.GITHUB_REPOSITORY || '';
+        const run_id = process.env.GITHUB_RUN_ID || '';
+        const server_url = process.env.GITHUB_SERVER_URL || 'https://github.com';
+        const run_url = run_id ? `${server_url}/${repository}/actions/runs/${run_id}` : '';
+        const ref = process.env.GITHUB_REF_NAME || process.env.GITHUB_REF || '';
+        const actor = process.env.GITHUB_ACTOR || '';
+        const channel = process.env.channel || 'package';
+        const bot_name = process.env.bot_name || 'kj-ops-bot';
+        const bot_icon_url = process.env.bot_icon_url || '';
+        const message = (process.env.message || '').trim();
+        const job_name = process.env.GITHUB_JOB || '';
+        const commit_sha = process.env.GITHUB_SHA ? process.env.GITHUB_SHA.substring(0, 7) : '';
+
+        const status_map = {
+          success: { emoji: '✅', color: '#2eb67d', label: 'Success' },
+          failure: { emoji: '🚨', color: '#e01e5a', label: 'Failure' },
+          cancelled: { emoji: '⚠️', color: '#ecb22e', label: 'Cancelled' }
+        };
+
+        const status = status_map[job_status] || {
+          emoji: 'ℹ️',
+          color: '#4a154b',
+          label: job_status ? job_status.charAt(0).toUpperCase() + job_status.slice(1) : 'Status Unknown'
+        };
+
+        const header_text = `${status.emoji} ${prefix} • ${workflow}`;
+        const fallback_text = `${status.emoji} ${prefix} ${status.label} for ${repository}${ref ? ` (${ref})` : ''}`.trim();
+
+        const default_messages = {
+          success: '✅ Workflow completed successfully.',
+          failure: '🚨 Workflow failed. Check the run for details.',
+          cancelled: '⚠️ Workflow was cancelled.'
+        };
+
+        const body_message = message || default_messages[job_status] || `ℹ️ Workflow finished with status ${status.label}.`;
+
+        const fields = [
+          repository && { type: 'mrkdwn', text: `*Repository:* ${repository}` },
+          ref && { type: 'mrkdwn', text: `*Ref:* \`${ref}\`` },
+          commit_sha && { type: 'mrkdwn', text: `*Commit:* \`${commit_sha}\`` },
+          job_name && { type: 'mrkdwn', text: `*Job:* ${job_name}` },
+          actor && { type: 'mrkdwn', text: `*Actor:* ${actor}` },
+          { type: 'mrkdwn', text: `*Provider:* ${provider_name}` },
+          { type: 'mrkdwn', text: `*Status:* ${status.label}` },
+          run_url && { type: 'mrkdwn', text: `*Run:* <${run_url}|View workflow run>` }
+        ].filter(Boolean);
+
+        const blocks = [
+          {
+            type: 'header',
+            text: { type: 'plain_text', text: header_text, emoji: true }
+          },
+          {
+            type: 'section',
+            fields
+          },
+          {
+            type: 'section',
+            text: { type: 'mrkdwn', text: body_message }
+          }
+        ];
+
+        const payload = {
+          channel,
+          username: bot_name,
+          icon_url: bot_icon_url,
+          text: fallback_text,
+          attachments: [
+            {
+              color: status.color,
+              blocks
+            }
+          ]
+        };
+
+        fs.writeFileSync(payload_path, JSON.stringify(payload, null, 2));
+        NODE
+
+        echo "payload_path=${GITHUB_WORKSPACE}/slack_payload.json" >> "$GITHUB_OUTPUT"
+    - name: Send Slack notification
+      uses: slackapi/slack-github-action@v1.27.0
+      with:
+        payload-file-path: ${{ steps.build.outputs.payload_path }}
+      env:
+        SLACK_WEBHOOK_URL: ${{ inputs.slack_webhook_url }}
+        SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK

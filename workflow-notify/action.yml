@@ -112,7 +112,7 @@ runs:
           label: job_status ? job_status.charAt(0).toUpperCase() + job_status.slice(1) : 'Status Unknown'
         };
 
-        const header_text = `${status.emoji} ${prefix} • ${workflow}`;
+        const header_text = `${status.emoji} ${prefix} • ${repository} • ${workflow}`;
 
         const default_messages = {
           success: '✅ Workflow completed successfully.',

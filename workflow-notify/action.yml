@@ -33,6 +33,10 @@ inputs:
     description: "Optional job status override (success, failure, cancelled, etc.)"
     required: false
     default: ""
+  version:
+    description: "Optional version override"
+    required: false
+    default: ""
 branding:
   color: "4A154B"
   icon: "hash"
@@ -70,7 +74,8 @@ runs:
         bot_icon_url: ${{ inputs.bot_icon_url }}
         message: ${{ inputs.message }}
         status_input: ${{ inputs.status }}
-        version: ${{ steps.ver.outputs.head_tag }}
+        override_version: ${{ inputs.version }}
+        tag_version: ${{ steps.ver.outputs.head_tag }}
       run: |
         set -euo pipefail
 
@@ -104,7 +109,7 @@ runs:
         const job_name = process.env.GITHUB_JOB || '';
         const commit_sha = process.env.GITHUB_SHA ? process.env.GITHUB_SHA.substring(0, 7) : '';
         const commit_url = `${server_url}/${repository}/commit/${commit_sha}`;
-        const version = process.env.version;
+        const version = process.env.override_version || process.env.tag_version;
         const version_url = `${server_url}/${repository}/releases/tag/${version}`;
 
         const status_map = {
@@ -126,7 +131,7 @@ runs:
         const fields = [
           repository && { type: 'mrkdwn', text: `*Repository:* <${repository_url}|${repository}>` },
           commit_sha && { type: 'mrkdwn', text: `*Commit:* <${commit_url}|${commit_sha}>` },
-          version && { type: 'mrkdwn', text: `*Version:* <${version_url}|${version ? version : '(no tag)'}>` },
+          { type: 'mrkdwn', text: `*Version:* <${version_url}|${version ? version : '(no tag)'}>` },
           actor && { type: 'mrkdwn', text: `*Actor:* ${actor}` },
           { type: 'mrkdwn', text: `*Status:* ${status.label}` },
           run_url && { type: 'mrkdwn', text: `*Run:* <${run_url}|View ${workflow}>` }

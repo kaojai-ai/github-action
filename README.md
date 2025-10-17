@@ -12,11 +12,11 @@
 
 Success notification example:
 
-![Successful workflow notification](workflow-notify/images/success.png)
+![Successful workflow notification](images/success.png)
 
 Failure notification example:
 
-![Failed workflow notification](workflow-notify/images/failure.png)
+![Failed workflow notification](images/failure.png)
 
 ### Supported providers
 

@@ -39,6 +39,18 @@ branding:
 runs:
   using: "composite"
   steps:
+    - name: Compute tags
+      id: ver
+      shell: bash
+      run: |
+        BRANCH="${{ env.TARGET_BRANCH }}"
+        SHORT_SHA="$(git rev-parse --short HEAD)"
+        # if HEAD has a semver tag like v1.2.3, capture it
+        HEAD_TAG="$(git tag --points-at HEAD | grep -E '^v[0-9]+' | head -n1 || true)"
+        echo "short_sha=$SHORT_SHA" >> $GITHUB_OUTPUT
+        echo "head_tag=$HEAD_TAG" >> $GITHUB_OUTPUT
+        echo "branch=$BRANCH" >> $GITHUB_OUTPUT
+
     - name: Build Slack payload
       id: build
       shell: bash
@@ -51,6 +63,7 @@ runs:
         bot_icon_url: ${{ inputs.bot_icon_url }}
         message: ${{ inputs.message }}
         status_input: ${{ inputs.status }}
+        version: ${{ steps.ver.outputs.head_tag }}
       run: |
         set -euo pipefail
 
@@ -71,6 +84,7 @@ runs:
         const provider_name = process.env.provider_name || 'slack';
         const workflow = process.env.GITHUB_WORKFLOW || 'Workflow';
         const repository = process.env.GITHUB_REPOSITORY || '';
+        const repository_url = `${process.env.GITHUB_SERVER_URL}/${repository}`;
         const run_id = process.env.GITHUB_RUN_ID || '';
         const server_url = process.env.GITHUB_SERVER_URL || 'https://github.com';
         const run_url = run_id ? `${server_url}/${repository}/actions/runs/${run_id}` : '';
@@ -82,6 +96,9 @@ runs:
         const message = (process.env.message || '').trim();
         const job_name = process.env.GITHUB_JOB || '';
         const commit_sha = process.env.GITHUB_SHA ? process.env.GITHUB_SHA.substring(0, 7) : '';
+        const commit_url = `${server_url}/${repository}/commit/${commit_sha}`;
+        const version = process.env.version || '(no tag)';
+        const version_url = `${server_url}/${repository}/releases/tag/${version}`;
 
         const status_map = {
           success: { emoji: '✅', color: '#2eb67d', label: 'Success' },
@@ -96,7 +113,6 @@ runs:
         };
 
         const header_text = `${status.emoji} ${prefix} • ${workflow}`;
-        const fallback_text = `${status.emoji} ${prefix} ${status.label} for ${repository}${ref ? ` (${ref})` : ''}`.trim();
 
         const default_messages = {
           success: '✅ Workflow completed successfully.',
@@ -107,12 +123,10 @@ runs:
         const body_message = message || default_messages[job_status] || `ℹ️ Workflow finished with status ${status.label}.`;
 
         const fields = [
-          repository && { type: 'mrkdwn', text: `*Repository:* ${repository}` },
-          ref && { type: 'mrkdwn', text: `*Ref:* \`${ref}\`` },
-          commit_sha && { type: 'mrkdwn', text: `*Commit:* \`${commit_sha}\`` },
-          job_name && { type: 'mrkdwn', text: `*Job:* ${job_name}` },
+          repository && { type: 'mrkdwn', text: `*Repository:* <${repository_url}|${repository}>` },
+          version && { type: 'mrkdwn', text: `*Version:* <${version_url}|${version}>` },
+          commit_sha && { type: 'mrkdwn', text: `*Version:* <${commit_url}|${commit_sha}>` },
           actor && { type: 'mrkdwn', text: `*Actor:* ${actor}` },
-          { type: 'mrkdwn', text: `*Provider:* ${provider_name}` },
           { type: 'mrkdwn', text: `*Status:* ${status.label}` },
           run_url && { type: 'mrkdwn', text: `*Run:* <${run_url}|View workflow run>` }
         ].filter(Boolean);
@@ -136,7 +150,7 @@ runs:
           channel,
           username: bot_name,
           icon_url: bot_icon_url,
-          text: fallback_text,
+          text: "",
           attachments: [
             {
               color: status.color,
